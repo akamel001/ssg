@@ -1,0 +1,4 @@
+ssg
+===
+
+Stupid Simple Graphs
