@@ -1,4 +1,6 @@
-ssg
+Stupid Simple Graphs (SSG)
 ===
 
-Stupid Simple Graphs
+Stupid simple graphs aims to make making graphing for devops much simpler. 
+
+More details to come.
