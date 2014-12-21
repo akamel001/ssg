@@ -2,11 +2,12 @@ package main
 
 import (
   "flag"
-  "../go-daemon"
+  "../libs/go-daemon"
+  "../libs/go-toml"
   "log"
   "os"
   "syscall"
-  "time"
+  //"time"
 )
 
 var (
@@ -69,14 +70,29 @@ var (
 
 func worker() {
   for {
-    log.Println("Sleeping for ", time.Second)
-    time.Sleep(time.Second)
-    if _, ok := <-stop; ok {
-      log.Println("got stop signal")
+    config, err := toml.LoadFile("./ssg.conf")
+    if err != nil {
+        log.Println("Error ", err.Error())
+    } else {
 
-      break
+        configTree := config.Get("postgres").(*toml.TomlTree)
+        user := configTree.Get("user").(string)
+        password := configTree.Get("password").(string)
+        port := configTree.Get("port").(int64)
+        log.Println("User is ", user, ". Password is ", password, " port (", port, ")")
+    } 
+    if _, ok := <-stop; ok {
+        break
     }
   }
+  //for {
+    //log.Println("Sleeping for ", time.Second)
+    // time.Sleep(time.Second)
+    // if _, ok := <-stop; ok {
+    //   log.Println("got stop signal")
+    //   break
+    // }
+  //}
 
   // Jump back to done to exit
   done <- struct{}{}
