@@ -1,8 +1,8 @@
 package main
 
 import (
-	"../libs/go-daemon"
-	"../libs/go-toml"
+	"github.com/sevlyar/go-daemon"
+	"github.com/pelletier/go-toml"
 	"flag"
 	"log"
 	"os"
