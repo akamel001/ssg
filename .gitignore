@@ -1,0 +1,6 @@
+server/log
+server/pid
+server/serverd
+client/log
+client/pid
+client/clientd
