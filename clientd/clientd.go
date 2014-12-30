@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/akamel001/go-toml"
 	"github.com/akamel001/go-daemon"
+	"github.com/akamel001/go-toml"
 	"log"
 	"os"
 	"syscall"
