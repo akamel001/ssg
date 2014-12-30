@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/sevlyar/go-daemon"
-	"github.com/pelletier/go-toml"
 	"flag"
+	"github.com/akamel001/go-toml"
+	"github.com/akamel001/go-daemon"
 	"log"
 	"os"
 	"syscall"
@@ -70,7 +70,7 @@ var (
 
 func worker() {
 	for {
-		config, err := toml.LoadFile("./ssg.conf")
+		config, err := toml.LoadFile("./clientd.conf")
 		if err != nil {
 			log.Println("Error ", err.Error())
 		} else {
