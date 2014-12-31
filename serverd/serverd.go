@@ -7,7 +7,11 @@ import (
 	"log"
 	"os"
 	"syscall"
-	//"time"
+	"net"
+	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/akamel001/ssg/libs"
+	//"io"
 )
 
 var (
@@ -30,7 +34,7 @@ func main() {
 		LogFilePerm: 0640,
 		WorkDir:     "./",
 		Umask:       027,
-		Args:        []string{"SSG_CLIENT_DAEMON"},
+		Args:        []string{"SSG_SERVER_DAEMON"},
 	}
 
 	if len(daemon.ActiveFlags()) > 0 {
@@ -69,7 +73,7 @@ var (
 )
 
 func worker() {
-	for {
+	//for {
 		config, err := toml.LoadFile("./serverd.conf")
 		if err != nil {
 			log.Println("Error ", err.Error())
@@ -80,11 +84,57 @@ func worker() {
 			password := configTree.Get("password").(string)
 			port := configTree.Get("port").(int64)
 			log.Println("User is ", user, ". Password is ", password, " port (", port, ")")
+			l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+			log.Println("Listening for connections on port ", port)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer l.Close()
+			for {
+				// Wait for a connection.
+				conn, err := l.Accept()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				go handle(conn)
+
+				// go func(c net.Conn) {
+				// 	log.Println("Received a new connection from ", c.RemoteAddr())
+				// 	//log.Println("Received data ", c.data)
+				// 	var buff = make([]byte, 30)
+				// 	for {
+				// 		readlen, ok := c.Read(buff)
+				// 		if ok != nil {
+				// 			log.Println("Error reading from socket ", ok)
+				// 			break
+				// 		}
+				// 		if readlen == 0 {
+				// 			log.Println("Connection closed by remote host")
+				// 			break
+				// 		}
+				// 		//log.Println("Message: ", string(buff))
+				// 		log.Printf("Got message: %x", buff)
+				// 		buff = buff[:0]
+				// 	}
+			    
+				// 	//fmt.Fscan(conn, &cmd)
+    // 			//log.Println(fmt.Println("Message:", string(cmd)))
+    // 			//log.Printf("%x", cmd)
+				// 	// Echo all incoming data.
+				// 	//io.Copy(c, c)
+				// 	// Shut down the connection.
+				// 	c.Close()
+				// }(conn)
+
+				//TODO: **** Need ti find a way to handle exit signal better **** 
+				// if _, ok := <-stop; ok {
+				// 	break
+				// }		
+			}
 		}
-		if _, ok := <-stop; ok {
-			break
-		}
-	}
+
+//	}
 	//for {
 	//log.Println("Sleeping for ", time.Second)
 	// time.Sleep(time.Second)
@@ -96,6 +146,44 @@ func worker() {
 
 	// Jump back to done to exit
 	done <- struct{}{}
+}
+
+func handle(c net.Conn){
+	log.Println("Received a new connection from ", c.RemoteAddr())
+	//TODO: *** create debug flag *** 
+	//log.Println("Received data ", c.data) 
+
+	//TODO: Message buffer is not exact and causes error when reading from socket 
+	var buff = make([]byte, 1024)
+	for {
+		readlen, ok := c.Read(buff)
+		if ok != nil {
+			log.Println("Error reading from socket ", ok)
+			break
+		}
+		if readlen == 0 {
+			log.Println("Connection closed by remote host")
+			break
+		}
+		//log.Println("Message: ", string(buff))
+		msg := new(ssg.DataPoint)
+
+		err := proto.Unmarshal(buff, msg)
+		if err != nil{
+			log.Println("Error received while trying to unmarshal message ", err)
+		}
+		log.Printf("Got message: %v", msg)
+	}
+  
+	//fmt.Fscan(conn, &cmd)
+	//log.Println(fmt.Println("Message:", string(cmd)))
+	//log.Printf("%x", cmd)
+	// Echo all incoming data.
+	//io.Copy(c, c)
+	// Shut down the connection.
+
+	//Need a better way to handle closing the connection 
+	//c.Close()
 }
 
 func termHandler(sig os.Signal) error {

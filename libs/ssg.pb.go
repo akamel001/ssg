@@ -6,10 +6,17 @@
 Package ssg is a generated protocol buffer package.
 
 It is generated from these files:
+<<<<<<< HEAD
 	ssg.proto
 
 It has these top-level messages:
 	DataPoint
+=======
+  ssg.proto
+
+It has these top-level messages:
+  DataPoint
+>>>>>>> 290c7e946850ec43e3889e16f0c578bc7a070d65
 */
 package ssg
 
@@ -21,11 +28,19 @@ var _ = proto.Marshal
 var _ = math.Inf
 
 type DataPoint struct {
+<<<<<<< HEAD
 	Source           *string  `protobuf:"bytes,1,req,name=source" json:"source,omitempty"`
 	Label            *string  `protobuf:"bytes,2,req,name=label" json:"label,omitempty"`
 	IntValue         *int64   `protobuf:"varint,3,opt,name=int_value" json:"int_value,omitempty"`
 	DoubleValue      *float64 `protobuf:"fixed64,4,opt,name=double_value" json:"double_value,omitempty"`
 	XXX_unrecognized []byte   `json:"-"`
+=======
+  Source           *string  `protobuf:"bytes,1,req,name=source" json:"source,omitempty"`
+  Label            *string  `protobuf:"bytes,2,req,name=label" json:"label,omitempty"`
+  IntValue         *int64   `protobuf:"varint,3,opt,name=int_value" json:"int_value,omitempty"`
+  DoubleValue      *float64 `protobuf:"fixed64,4,opt,name=double_value" json:"double_value,omitempty"`
+  XXX_unrecognized []byte   `json:"-"`
+>>>>>>> 290c7e946850ec43e3889e16f0c578bc7a070d65
 }
 
 func (m *DataPoint) Reset()         { *m = DataPoint{} }
@@ -33,6 +48,7 @@ func (m *DataPoint) String() string { return proto.CompactTextString(m) }
 func (*DataPoint) ProtoMessage()    {}
 
 func (m *DataPoint) GetSource() string {
+<<<<<<< HEAD
 	if m != nil && m.Source != nil {
 		return *m.Source
 	}
@@ -62,3 +78,34 @@ func (m *DataPoint) GetDoubleValue() float64 {
 
 func init() {
 }
+=======
+  if m != nil && m.Source != nil {
+    return *m.Source
+  }
+  return ""
+}
+
+func (m *DataPoint) GetLabel() string {
+  if m != nil && m.Label != nil {
+    return *m.Label
+  }
+  return ""
+}
+
+func (m *DataPoint) GetIntValue() int64 {
+  if m != nil && m.IntValue != nil {
+    return *m.IntValue
+  }
+  return 0
+}
+
+func (m *DataPoint) GetDoubleValue() float64 {
+  if m != nil && m.DoubleValue != nil {
+    return *m.DoubleValue
+  }
+  return 0
+}
+
+func init() {
+}
+>>>>>>> 290c7e946850ec43e3889e16f0c578bc7a070d65
