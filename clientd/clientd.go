@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/akamel001/ssg/clientd/redis"
 	"github.com/akamel001/go-daemon"
 	"github.com/akamel001/go-toml"
 	"log"
@@ -9,7 +10,7 @@ import (
 	"syscall"
 	//"time"
 )
-
+//var client *redis.Client
 var (
 	signal = flag.String("s", "", `send signal to the daemon
     quit — graceful shutdown
@@ -80,6 +81,7 @@ func worker() {
 			password := configTree.Get("password").(string)
 			port := configTree.Get("port").(int64)
 			log.Println("User is ", user, ". Password is ", password, " port (", port, ")")
+			redis.Ssg_redis()
 		}
 		if _, ok := <-stop; ok {
 			break
@@ -97,6 +99,7 @@ func worker() {
 	// Jump back to done to exit
 	done <- struct{}{}
 }
+
 
 func termHandler(sig os.Signal) error {
 	log.Println("terminating...")
