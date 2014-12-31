@@ -2,14 +2,18 @@ package redis
 import (
 	"log"
 	"strings"
-	"fmt"
 	"menteslibres.net/gosexy/redis"
+	"fmt"
 )
 
 var client *redis.Client
 
 func Ssg_redis() {
 	var err error
+
+	var mmm map[string]string
+	mmm = make(map[string]string)
+
 	stats_read := []string{"CPU", "Memory", "Stats"}
 
 	client = redis.New()
@@ -28,25 +32,32 @@ func Ssg_redis() {
 	// Random thought; should the metric to be monitored be rad from the config file; metric:file_path
 	for key := range stats_read {
 		info, err := client.Info(stats_read[key])
-
+		log.Println(&mmm)
 
 		if err !=nil {
 			log.Fatalf("Failed to get data from Redis")
 
 			// if info in not 0, start parsing
 		}else {
-			data_split(stats_read[key], info)
+			mmm = data_split(stats_read[key], info, mmm)
+			fmt.Println(mmm)
+
 		}
 	}
+	//for key, value := range mmm {
+	//	fmt.Println("Key:", key, "Value:", value)
+	//}
 
 }
 
-func data_split(delimiter string, info string) {
+func data_split(delimiter, info string, mmm map[string]string) map[string]string{
 	delimiter = "#" + " " + delimiter
 	result := strings.Split(info, delimiter)
 	k, v := result[0], result[1]
-	fmt.Println(k, v)
+	mmm[k]=v
+	return mmm
 
 }
+
 
 
