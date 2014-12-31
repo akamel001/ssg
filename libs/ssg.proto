@@ -1,0 +1,10 @@
+package ssg;
+
+message DataPoint {
+        required string source = 1;
+        required string label = 2;
+        oneof value {
+              int64 int_value = 3;
+              double double_value = 4;
+        }
+}

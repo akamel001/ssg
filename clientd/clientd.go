@@ -4,24 +4,22 @@ import (
 	"flag"
 	"github.com/akamel001/go-daemon"
 	"github.com/akamel001/go-toml"
+	"github.com/akamel001/ssg/libs"
+	"github.com/golang/protobuf/proto"
 	"log"
+	"net"
 	"os"
+	"strconv"
 	"syscall"
-	//"time"
+	"time"
 )
 
 var (
-	signal = flag.String("s", "", `send signal to the daemon
-    quit — graceful shutdown
-    stop — fast shutdown
-    reload — reloading the configuration file`)
+	config_file = flag.String("c", "./clientd.conf", "What config to use for the client")
 )
 
 func main() {
 	flag.Parse()
-	daemon.AddCommand(daemon.StringFlag(signal, "quit"), syscall.SIGQUIT, termHandler)
-	daemon.AddCommand(daemon.StringFlag(signal, "stop"), syscall.SIGTERM, termHandler)
-	daemon.AddCommand(daemon.StringFlag(signal, "reload"), syscall.SIGHUP, reloadHandler)
 
 	cntxt := &daemon.Context{
 		PidFileName: "pid",
@@ -69,32 +67,44 @@ var (
 )
 
 func worker() {
-	for {
-		config, err := toml.LoadFile("./clientd.conf")
-		if err != nil {
-			log.Println("Error ", err.Error())
-		} else {
+	var user, password, host string
+	var port int64
 
-			configTree := config.Get("postgres").(*toml.TomlTree)
-			user := configTree.Get("user").(string)
-			password := configTree.Get("password").(string)
-			port := configTree.Get("port").(int64)
-			log.Println("User is ", user, ". Password is ", password, " port (", port, ")")
-		}
-		if _, ok := <-stop; ok {
-			break
-		}
+	log.Printf("Loading config from %s", *config_file)
+	config, err := toml.LoadFile(*config_file)
+
+	if err != nil {
+		log.Fatal("Error ", err.Error())
+	} else {
+		tree := config.Get("clientd").(*toml.TomlTree)
+		user = tree.Get("user").(string)
+		password = tree.Get("password").(string)
+		port = tree.Get("port").(int64)
+		host = tree.Get("host").(string)
+		log.Println("User is ", user, ". Password is ", password, " port (", port, ")")
 	}
-	//for {
-	//log.Println("Sleeping for ", time.Second)
-	// time.Sleep(time.Second)
-	// if _, ok := <-stop; ok {
-	//   log.Println("got stop signal")
-	//   break
-	// }
-	//}
 
-	// Jump back to done to exit
+	conn, err := net.Dial("tcp", net.JoinHostPort(host, strconv.Itoa(int(port))))
+
+	if err != nil {
+		log.Println("Error ", err.Error())
+	}
+
+	for {
+		msg := &ssg.DataPoint{
+			Source:   proto.String("suck.a.dick.com"),
+			Label:    proto.String("Impossibru"),
+			IntValue: proto.Int64(12345),
+		}
+		line_msg, err := proto.Marshal(msg)
+		if err != nil {
+			log.Println("Failed to encode test message")
+		}
+		log.Printf("Sending message: %x", line_msg)
+		conn.Write(line_msg)
+		time.Sleep(1 * time.Second)
+	}
+
 	done <- struct{}{}
 }
 
