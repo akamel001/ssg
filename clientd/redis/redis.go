@@ -41,6 +41,7 @@ func data_split(delimiter string, info string) {
 	result := strings.Split(info, delimiter)
 	k, v := result[0], result[1]
 	fmt.Println(k, v)
+
 }
 
 
