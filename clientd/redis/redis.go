@@ -10,6 +10,8 @@ var client *redis.Client
 
 func Ssg_redis() {
 	var err error
+	stats_read := []string{"CPU", "Memory", "Stats"}
+
 	client = redis.New()
 
 	err = client.Connect("localhost", 6379)
@@ -24,14 +26,17 @@ func Ssg_redis() {
 	log.Println("Getting INFO")
 
 	// Random thought; should the metric to be monitored be rad from the config file; metric:file_path
-	info, err := client.Info("CPU")
+	for key := range stats_read {
+		info, err := client.Info(stats_read[key])
 
-	if len(info) == 0 {
-		log.Fatalf("Failed to get data from Redis")
 
-		// if info in not 0, start parsing
-	}else {
-		data_split("CPU", info)
+		if err !=nil {
+			log.Fatalf("Failed to get data from Redis")
+
+			// if info in not 0, start parsing
+		}else {
+			data_split(stats_read[key], info)
+		}
 	}
 
 }
