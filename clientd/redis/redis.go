@@ -38,21 +38,25 @@ func Ssg_redis() {
 
 			// if info in not 0, start parsing
 		}else {
+			//fmt.Println(info)
 			data_split(stats_read[key], info, mmm)
 
 		}
 	}
-	for key, value := range mmm {
-		fmt.Println("Key:", key, "Value:", value)
-	}
+	fmt.Println(mmm)
+	//for key, value := range mmm {
+	//	fmt.Println("Key:", key, "Value:", value)
+	//}
 
 }
 
 func data_split(delimiter, info string, mmm map[string]string){
 	delimiter = "#" + " " + delimiter
 	result := strings.Split(info, delimiter)
-	k, v := result[0], result[1]
-	mmm[k]=v
+	v := result[1]
+	//fmt.Println(k)
+	//fmt.Println(v)
+	mmm[delimiter]=v
 
 }
 
