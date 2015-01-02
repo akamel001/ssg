@@ -10,19 +10,26 @@ import (
 	//"time"
 )
 
+func init(){
+	daemon.RedirectStdout = false
+}
+
 var (
 	loglvl = daemon.LogLevelFlag("loglvl")
-	//log = daemon.LogFileFlag("log", 7777777)
+	log = daemon.LogFileFlag("log", 0644)
 	//delay = flag.Duration("delay", time.Nanosecond, "Delay between restarts")
 	fork  = daemon.ForkPIDFlags("fork", "pidfile", "serverd.pid")
-	config_file = flag.String("config", "./serverd.conf", "What config to use for the server")
-	config, err = toml.LoadFile(*config_file)
+	config, err = toml.LoadFile("./serverd.conf")
 	port_obj  = daemon.ListenFlag("port", "tcp", fmt.Sprintf(":%d", config.Get("postgres.port").(int64)), "port")
 )
 
 func main() {
 	flag.Parse()
 	daemon.Verbose.Printf("Command-line: %q", os.Args)
+
+	if len(os.Args) < 2 {
+		daemon.Info.Printf("Daemon started without any arguments. Running in foreground.")
+	}
 	//daemon.RedirectStdout = false
 	//daemon.Verbose.Printf("Logging to file %s", *log.String())
 	fork.Fork()
@@ -30,7 +37,6 @@ func main() {
 	if err != nil {
 		daemon.Fatal.Printf("Failed to load config: ", err.Error())
 	} else {
-		daemon.Verbose.Printf("Loaded config file %s", *config_file)
 
 		port, err := port_obj.Listen()
 		if err != nil {
@@ -84,7 +90,7 @@ func handle(c net.Conn){
 		// 	daemon.Info.Printf("Error received while trying to unmarshal message ", err)
 		// }
 		c.Write(buff)
-		daemon.Verbose.Printf("Got message: %v", buff)
+		daemon.Verbose.Printf("Got message: %s", buff)
 	}
 	daemon.Verbose.Printf("Closed handle!")
 }  
