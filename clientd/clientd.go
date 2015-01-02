@@ -4,7 +4,7 @@ import (
 	"flag"
 	"kylelemons.net/go/daemon"
 	"github.com/akamel001/go-toml"
-	"github.com/akamel001/ssg/libs"
+	"github.com/akamel001/ssg/libs/protobuf"
 	"github.com/golang/protobuf/proto"
 	"net"
 	"os"
