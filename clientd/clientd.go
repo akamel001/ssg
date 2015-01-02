@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"github.com/akamel001/go-daemon"
 	"github.com/akamel001/go-toml"
 	"github.com/akamel001/ssg/libs"
@@ -11,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"syscall"
+	"flag"
 	"time"
 )
 
@@ -60,11 +60,6 @@ func main() {
 	}
 	log.Println("daemon terminated")
 }
-
-var (
-	stop = make(chan struct{})
-	done = make(chan struct{})
-)
 
 func worker() {
 	var user, password, host string
