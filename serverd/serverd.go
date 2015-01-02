@@ -17,20 +17,24 @@ var (
 	loglvl = daemon.LogLevelFlag("loglvl")
 	log = daemon.LogFileFlag("log", 0644)
 	fork  = daemon.ForkPIDFlags("fork", "pidfile", "serverd.pid")
-	config, err = toml.LoadFile("./serverd.conf")
-	port_obj  = daemon.ListenFlag("port", "tcp", fmt.Sprintf(":%d", config.Get("postgres.port").(int64)), "port")
+	config_file =  flag.String("config", "./serverd.conf", "What config to use for the client")
+	// config, err = toml.LoadFile(*config_file)
+	// port_obj  = daemon.ListenFlag("port", "tcp", fmt.Sprintf(":%d", config.Get("postgres.port").(int64)), "port")
 )
 
 func main() {
 	flag.Parse()
+
 	daemon.Verbose.Printf("Command-line: %q", os.Args)
 
 	if len(os.Args) < 2 {
 		daemon.Info.Printf("Daemon started without any arguments. Running in foreground.")
 	}
-
+	daemon.Info.Printf("config file: %s", *config_file)
 	fork.Fork()
 
+	config, err := toml.LoadFile(*config_file)
+	port_obj  := daemon.ListenFlag("port", "tcp", fmt.Sprintf(":%d", config.Get("postgres.port").(int64)), "port")
 	if err != nil {
 		daemon.Fatal.Printf("Failed to load config: ", err.Error())
 	} else {
