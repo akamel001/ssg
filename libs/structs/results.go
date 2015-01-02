@@ -1,6 +1,7 @@
 package Results
 
 type Result struct {
+	service string,
 	fvalue float64,
 	ivalue int64
 }
