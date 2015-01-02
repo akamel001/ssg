@@ -7,7 +7,6 @@ import (
 	"github.com/akamel001/go-toml"
 	"fmt"
 	"net"
-	//"time"
 )
 
 func init(){
@@ -17,7 +16,6 @@ func init(){
 var (
 	loglvl = daemon.LogLevelFlag("loglvl")
 	log = daemon.LogFileFlag("log", 0644)
-	//delay = flag.Duration("delay", time.Nanosecond, "Delay between restarts")
 	fork  = daemon.ForkPIDFlags("fork", "pidfile", "serverd.pid")
 	config, err = toml.LoadFile("./serverd.conf")
 	port_obj  = daemon.ListenFlag("port", "tcp", fmt.Sprintf(":%d", config.Get("postgres.port").(int64)), "port")
@@ -30,8 +28,7 @@ func main() {
 	if len(os.Args) < 2 {
 		daemon.Info.Printf("Daemon started without any arguments. Running in foreground.")
 	}
-	//daemon.RedirectStdout = false
-	//daemon.Verbose.Printf("Logging to file %s", *log.String())
+
 	fork.Fork()
 
 	if err != nil {
@@ -56,11 +53,7 @@ func main() {
 			}
 			daemon.Verbose.Printf("Serve loop exited")
 		}()
-		// go func() {
-		// 	time.Sleep(*delay)
-		// 	*delay = 24 * time.Hour
-		// 	daemon.Restart(15 * time.Second)
-		// }()
+
 		daemon.Run()
 	}
 }
@@ -68,8 +61,6 @@ func main() {
 func handle(c net.Conn){
 	//daemon.Info.Printf("Received a new connection from ", c.RemoteAddr())
 	defer c.Close()
-	//TODO: *** create debug flag *** 
-	//log.Println("Received data ", c.data) 
 
 	//TODO: Message buffer is not exact and causes error when reading from socket 
 	var buff = make([]byte, 1024)
