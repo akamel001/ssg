@@ -2,92 +2,64 @@ package main
 
 import (
 	"flag"
-	"github.com/akamel001/go-daemon"
+	"kylelemons.net/go/daemon"
 	"github.com/akamel001/go-toml"
 	"github.com/akamel001/ssg/libs"
 	"github.com/golang/protobuf/proto"
-	"log"
 	"net"
 	"os"
 	"strconv"
-	"syscall"
 	"time"
 )
 
+func init(){
+	daemon.RedirectStdout = false
+}
+
 var (
-	config_file = flag.String("c", "./clientd.conf", "What config to use for the client")
+	loglvl = daemon.LogLevelFlag("loglvl")
+	log = daemon.LogFileFlag("log", 0644)
+	fork  = daemon.ForkPIDFlags("fork", "pidfile", "clientd.pid")
+	config_file =  flag.String("config", "./clientd.conf", "What config to use for the client")
 )
 
 func main() {
 	flag.Parse()
 
-	cntxt := &daemon.Context{
-		PidFileName: "pid",
-		PidFilePerm: 0644,
-		LogFileName: "log",
-		LogFilePerm: 0640,
-		WorkDir:     "./",
-		Umask:       027,
-		Args:        []string{"SSG_CLIENT_DAEMON"},
-	}
+	daemon.Verbose.Printf("Command-line: %q", os.Args)
 
-	if len(daemon.ActiveFlags()) > 0 {
-		d, err := cntxt.Search()
-		if err != nil {
-			log.Fatalln("Unable send signal to the daemon:", err)
-		}
-		daemon.SendCommands(d)
-		return
+	if len(os.Args) < 2 {
+		daemon.Info.Printf("Daemon started without any arguments. Running in foreground.")
 	}
+	daemon.Info.Printf("config file: %s", *config_file)
+	fork.Fork()
 
-	d, err := cntxt.Reborn()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	if d != nil {
-		return
-	}
-	defer cntxt.Release()
-
-	log.Println("- - - - - - - - - - - - - - -")
-	log.Println("daemon started")
-
-	go worker()
-
-	err = daemon.ServeSignals()
-	if err != nil {
-		log.Println("Error:", err)
-	}
-	log.Println("daemon terminated")
+	go send_metrics(*config_file)
+	daemon.Run()
 }
 
-var (
-	stop = make(chan struct{})
-	done = make(chan struct{})
-)
-
-func worker() {
+func send_metrics(config_file string) {
 	var user, password, host string
 	var port int64
+	config, err := toml.LoadFile(config_file)
 
-	log.Printf("Loading config from %s", *config_file)
-	config, err := toml.LoadFile(*config_file)
+	daemon.Info.Printf("Loading config from %s", config_file)
 
 	if err != nil {
-		log.Fatal("Error ", err.Error())
+		daemon.Fatal.Printf("Error ", err.Error())
 	} else {
 		tree := config.Get("clientd").(*toml.TomlTree)
 		user = tree.Get("user").(string)
 		password = tree.Get("password").(string)
 		port = tree.Get("port").(int64)
 		host = tree.Get("host").(string)
-		log.Println("User is ", user, ". Password is ", password, " port (", port, ")")
+		daemon.Info.Printf("User: %s \tPassword: %s\tHost: %s\tPort: %d", user, password, host, port)
 	}
 
 	conn, err := net.Dial("tcp", net.JoinHostPort(host, strconv.Itoa(int(port))))
 
 	if err != nil {
-		log.Println("Error ", err.Error())
+		daemon.Fatal.Printf("Error while dialing connection %s", err.Error())
 	}
 
 	for {
@@ -98,26 +70,12 @@ func worker() {
 		}
 		line_msg, err := proto.Marshal(msg)
 		if err != nil {
-			log.Println("Failed to encode test message")
+			daemon.Warning.Printf("Failed to encode test message")
 		}
-		log.Printf("Sending message: %x", line_msg)
+		daemon.Info.Printf("Sending message: %x", line_msg)
 		conn.Write(line_msg)
 		time.Sleep(1 * time.Second)
 	}
-
-	done <- struct{}{}
+	daemon.Verbose.Printf("Serve loop exited")
 }
 
-func termHandler(sig os.Signal) error {
-	log.Println("terminating...")
-	stop <- struct{}{}
-	if sig == syscall.SIGQUIT {
-		<-done
-	}
-	return daemon.ErrStop
-}
-
-func reloadHandler(sig os.Signal) error {
-	log.Println("configuration reloaded")
-	return nil
-}
