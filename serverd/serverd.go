@@ -7,10 +7,13 @@ import (
 	"github.com/akamel001/go-toml"
 	"fmt"
 	"net"
+	//"time"
 )
 
 var (
-	//log = daemon.LogLevelFlag("log")
+	loglvl = daemon.LogLevelFlag("loglvl")
+	//log = daemon.LogFileFlag("log", 7777777)
+	//delay = flag.Duration("delay", time.Nanosecond, "Delay between restarts")
 	fork  = daemon.ForkPIDFlags("fork", "pidfile", "serverd.pid")
 	config_file = flag.String("config", "./serverd.conf", "What config to use for the server")
 	config, err = toml.LoadFile(*config_file)
@@ -20,8 +23,8 @@ var (
 func main() {
 	flag.Parse()
 	daemon.Verbose.Printf("Command-line: %q", os.Args)
-	daemon.LogLevel = daemon.Verbose
-
+	//daemon.RedirectStdout = false
+	//daemon.Verbose.Printf("Logging to file %s", *log.String())
 	fork.Fork()
 
 	if err != nil {
@@ -47,7 +50,11 @@ func main() {
 			}
 			daemon.Verbose.Printf("Serve loop exited")
 		}()
-
+		// go func() {
+		// 	time.Sleep(*delay)
+		// 	*delay = 24 * time.Hour
+		// 	daemon.Restart(15 * time.Second)
+		// }()
 		daemon.Run()
 	}
 }
@@ -63,11 +70,11 @@ func handle(c net.Conn){
 	for {
 		readlen, ok := c.Read(buff)
 		if ok != nil {
-			daemon.Info.Printf("Error reading from socket %s", ok)
+			daemon.Warning.Printf("Error reading from socket %s", ok)
 			break
 		}
 		if readlen == 0 {
-			daemon.Info.Printf("Connection closed by remote host")
+			daemon.Warning.Printf("Connection closed by remote host")
 			break
 		}
 		//log.Println("Message: ", string(buff))
