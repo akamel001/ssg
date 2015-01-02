@@ -1,5 +1,5 @@
 serverd/log
-serverd/pid
+serverd/serverd.pid
 serverd/serverd
 clientd/log
 clientd/pid

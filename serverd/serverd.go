@@ -2,154 +2,59 @@ package main
 
 import (
 	"flag"
-	"github.com/akamel001/go-daemon"
-	"github.com/akamel001/go-toml"
-	"log"
 	"os"
-	"syscall"
-	"net"
+	"kylelemons.net/go/daemon"
+	"github.com/akamel001/go-toml"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/akamel001/ssg/libs"
-	//"io"
+	"net"
 )
 
 var (
-	signal = flag.String("s", "", `send signal to the daemon
-    quit — graceful shutdown
-    stop — fast shutdown
-    reload — reloading the configuration file`)
+	//log = daemon.LogLevelFlag("log")
+	fork  = daemon.ForkPIDFlags("fork", "pidfile", "serverd.pid")
+	config_file = flag.String("config", "./serverd.conf", "What config to use for the server")
+	config, err = toml.LoadFile(*config_file)
+	port_obj  = daemon.ListenFlag("port", "tcp", fmt.Sprintf(":%d", config.Get("postgres.port").(int64)), "port")
 )
 
 func main() {
 	flag.Parse()
-	daemon.AddCommand(daemon.StringFlag(signal, "quit"), syscall.SIGQUIT, termHandler)
-	daemon.AddCommand(daemon.StringFlag(signal, "stop"), syscall.SIGTERM, termHandler)
-	daemon.AddCommand(daemon.StringFlag(signal, "reload"), syscall.SIGHUP, reloadHandler)
+	daemon.Verbose.Printf("Command-line: %q", os.Args)
+	daemon.LogLevel = daemon.Verbose
 
-	cntxt := &daemon.Context{
-		PidFileName: "pid",
-		PidFilePerm: 0644,
-		LogFileName: "log",
-		LogFilePerm: 0640,
-		WorkDir:     "./",
-		Umask:       027,
-		Args:        []string{"SSG_SERVER_DAEMON"},
-	}
+	fork.Fork()
 
-	if len(daemon.ActiveFlags()) > 0 {
-		d, err := cntxt.Search()
+	if err != nil {
+		daemon.Fatal.Printf("Failed to load config: ", err.Error())
+	} else {
+		daemon.Verbose.Printf("Loaded config file %s", *config_file)
+
+		port, err := port_obj.Listen()
 		if err != nil {
-			log.Fatalln("Unable send signal to the daemon:", err)
+			daemon.Fatal.Printf("listen: %s", err)
 		}
-		daemon.SendCommands(d)
-		return
-	}
 
-	d, err := cntxt.Reborn()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	if d != nil {
-		return
-	}
-	defer cntxt.Release()
-
-	log.Println("- - - - - - - - - - - - - - -")
-	log.Println("daemon started")
-
-	go worker()
-
-	err = daemon.ServeSignals()
-	if err != nil {
-		log.Println("Error:", err)
-	}
-	log.Println("daemon terminated")
-}
-
-var (
-	stop = make(chan struct{})
-	done = make(chan struct{})
-)
-
-func worker() {
-	//for {
-		config, err := toml.LoadFile("./serverd.conf")
-		if err != nil {
-			log.Println("Error ", err.Error())
-		} else {
-
-			configTree := config.Get("postgres").(*toml.TomlTree)
-			user := configTree.Get("user").(string)
-			password := configTree.Get("password").(string)
-			port := configTree.Get("port").(int64)
-			log.Println("User is ", user, ". Password is ", password, " port (", port, ")")
-			l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-			log.Println("Listening for connections on port ", port)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer l.Close()
+		go func() {
 			for {
-				// Wait for a connection.
-				conn, err := l.Accept()
-				if err != nil {
-					log.Fatal(err)
+				conn, err := port.Accept()
+				if err == daemon.ErrStopped {
+					break
 				}
-
+				if err != nil {
+					daemon.Error.Printf("accept: %s", err)
+				}
 				go handle(conn)
-
-				// go func(c net.Conn) {
-				// 	log.Println("Received a new connection from ", c.RemoteAddr())
-				// 	//log.Println("Received data ", c.data)
-				// 	var buff = make([]byte, 30)
-				// 	for {
-				// 		readlen, ok := c.Read(buff)
-				// 		if ok != nil {
-				// 			log.Println("Error reading from socket ", ok)
-				// 			break
-				// 		}
-				// 		if readlen == 0 {
-				// 			log.Println("Connection closed by remote host")
-				// 			break
-				// 		}
-				// 		//log.Println("Message: ", string(buff))
-				// 		log.Printf("Got message: %x", buff)
-				// 		buff = buff[:0]
-				// 	}
-			    
-				// 	//fmt.Fscan(conn, &cmd)
-    // 			//log.Println(fmt.Println("Message:", string(cmd)))
-    // 			//log.Printf("%x", cmd)
-				// 	// Echo all incoming data.
-				// 	//io.Copy(c, c)
-				// 	// Shut down the connection.
-				// 	c.Close()
-				// }(conn)
-
-				//TODO: **** Need ti find a way to handle exit signal better **** 
-				// if _, ok := <-stop; ok {
-				// 	break
-				// }		
 			}
-		}
+			daemon.Verbose.Printf("Serve loop exited")
+		}()
 
-//	}
-	//for {
-	//log.Println("Sleeping for ", time.Second)
-	// time.Sleep(time.Second)
-	// if _, ok := <-stop; ok {
-	//   log.Println("got stop signal")
-	//   break
-	// }
-	//}
-
-	// Jump back to done to exit
-	done <- struct{}{}
+		daemon.Run()
+	}
 }
 
 func handle(c net.Conn){
-	log.Println("Received a new connection from ", c.RemoteAddr())
+	//daemon.Info.Printf("Received a new connection from ", c.RemoteAddr())
+	defer c.Close()
 	//TODO: *** create debug flag *** 
 	//log.Println("Received data ", c.data) 
 
@@ -158,44 +63,22 @@ func handle(c net.Conn){
 	for {
 		readlen, ok := c.Read(buff)
 		if ok != nil {
-			log.Println("Error reading from socket ", ok)
+			daemon.Info.Printf("Error reading from socket %s", ok)
 			break
 		}
 		if readlen == 0 {
-			log.Println("Connection closed by remote host")
+			daemon.Info.Printf("Connection closed by remote host")
 			break
 		}
 		//log.Println("Message: ", string(buff))
-		msg := new(ssg.DataPoint)
-
-		err := proto.Unmarshal(buff, msg)
-		if err != nil{
-			log.Println("Error received while trying to unmarshal message ", err)
-		}
-		log.Printf("Got message: %v", msg)
+		//msg := new(ssg.DataPoint)
+		//err := proto.Unmarshal(buff, msg)
+		// if err != nil{
+		// 	daemon.Info.Printf("Error received while trying to unmarshal message ", err)
+		// }
+		c.Write(buff)
+		daemon.Verbose.Printf("Got message: %v", buff)
 	}
-  
-	//fmt.Fscan(conn, &cmd)
-	//log.Println(fmt.Println("Message:", string(cmd)))
-	//log.Printf("%x", cmd)
-	// Echo all incoming data.
-	//io.Copy(c, c)
-	// Shut down the connection.
+	daemon.Verbose.Printf("Closed handle!")
+}  
 
-	//Need a better way to handle closing the connection 
-	//c.Close()
-}
-
-func termHandler(sig os.Signal) error {
-	log.Println("terminating...")
-	stop <- struct{}{}
-	if sig == syscall.SIGQUIT {
-		<-done
-	}
-	return daemon.ErrStop
-}
-
-func reloadHandler(sig os.Signal) error {
-	log.Println("configuration reloaded")
-	return nil
-}
